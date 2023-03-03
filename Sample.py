@@ -9,7 +9,7 @@
 from __future__ import print_function
 import numpy as np 
 
-WORLD_SIZE = 4
+WORLD_SIZE = 5
 ACTION_PORB = 0.25
 REWARD = -1
 
