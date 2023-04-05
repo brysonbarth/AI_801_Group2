@@ -366,7 +366,7 @@ if __name__ == '__main__':
     sarsa_world.set_terminal_state(row=6, col=5, reward=-50)
     sarsa_world.set_wall(walls=walls)
     # Optimal policy
-    sarsa_world.sarsa_algorithm(n_episode=10000, alpha=1, epsilon=0.00001, discount_factor=1, random_start=False)
+    sarsa_world.sarsa_algorithm(n_episode=150, alpha=1, epsilon=0.00001, discount_factor=1, random_start=False)
     # Optimal path
     # sarsa_world.sarsa_algorithm(n_episode=100, alpha=1, epsilon=0, discount_factor=1, random_start=False)
     common_functions.plot_world(worlds=[sarsa_world], variable='q_a')
@@ -377,7 +377,7 @@ if __name__ == '__main__':
     sarsa_world_random.set_terminal_state(row=6, col=5, reward=-50)
     sarsa_world_random.set_wall(walls=walls)
     # Optimal policy
-    sarsa_world_random.sarsa_algorithm(n_episode=10000, alpha=1, epsilon=0.00001, discount_factor=1, random_start=True)
+    sarsa_world_random.sarsa_algorithm(n_episode=150, alpha=1, epsilon=0.00001, discount_factor=1, random_start=True)
     # Optimal path
     # sarsa_world_random.sarsa_algorithm(n_episode=100, alpha=1, epsilon=0, discount_factor=1, random_start=True)
     common_functions.plot_world(worlds=[sarsa_world_random], variable='q_a')

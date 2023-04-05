@@ -1,76 +1,183 @@
-#######################################################################
-# Copyright (C)                                                       #
-# 2016 Shangtong Zhang(zhangshangtong.cpp@gmail.com)                  #
-# 2016 Kenta Shimada(hyperkentakun@gmail.com)                         #
-# Permission given to modify the code as long as you keep this        #
-# declaration at the top                                              #
-#######################################################################
+#This notebook is where we will test our code. We may convert all code to a .py file if necessary
+import numpy as np
+import seaborn as sns
+import pandas as pd
+import matplotlib.pyplot as plt
 
-from __future__ import print_function
-import numpy as np 
+# global variables
+BOARD_ROWS = 5
+BOARD_COLS = 5
+WIN_STATE = (3, 3)
+LOSE_STATE = (1, 1)
+LOSE_STATE_B = (4,1)
+START = (0, 0)
+DETERMINISTIC = True
 
-WORLD_SIZE = 5
-ACTION_PORB = 0.25
-REWARD = -1
 
-def next_state(state, action):
-    i, j = state
-    if i == 0 and action == 'U':
-        return [i, j]
-    if i == WORLD_SIZE - 1 and action == 'D':
-        return [i, j]
-    if j == 0 and action == 'L':
-        return [i, j]
-    if j == WORLD_SIZE - 1 and action == 'R':
-        return [i, j]
+class State:
+    def __init__(self, state=START):
+        self.board = np.zeros([BOARD_ROWS, BOARD_COLS])
+        self.board[1, 1] = -1
+        self.state = state
+        self.isEnd = False
+        self.determine = DETERMINISTIC
 
-    if action == 'U':
-        return [i - 1, j]
-    if action == 'D':
-        return [i + 1, j]
-    if action == 'R':
-        return [i, j + 1]
-    if action == 'L':
-        return[i, j - 1]
+    def giveReward(self):
+        if self.state == WIN_STATE:
+            return 50
+        elif self.state == LOSE_STATE:
+            return -50
+        elif self.state == LOSE_STATE_B:
+            return -50
+        else:
+            return -1
 
-states = []
-for i in range(WORLD_SIZE):
-    for j in range(WORLD_SIZE):
-        if (i == 0 and j == 0) or (i == WORLD_SIZE-1 and j == WORLD_SIZE-1):
-            continue
-        states.append([i, j])
+    def isEndFunc(self):
+        if (self.state == WIN_STATE) or (self.state == LOSE_STATE) or (self.state == LOSE_STATE_B):
+            self.isEnd = True
 
-actions = ['U', 'D', 'R', 'L']
+    def nxtPosition(self, action):
+        """
+        action: up, down, left, right
+        -------------
+        0 | 1 | 2| 3|
+        1 |
+        2 |
+        return next position
+        """
+        if self.determine:
+            if action == "up":
+                nxtState = (self.state[0] - 1, self.state[1])
+            elif action == "down":
+                nxtState = (self.state[0] + 1, self.state[1])
+            elif action == "left":
+                nxtState = (self.state[0], self.state[1] - 1)
+            else:
+                nxtState = (self.state[0], self.state[1] + 1)
+            # if next state legal
+            if (nxtState[0] >= 0) and (nxtState[0] <= (BOARD_ROWS -1)):
+                if (nxtState[1] >= 0) and (nxtState[1] <= (BOARD_COLS -1)):
+                    if nxtState != (1, 1):
+                        return nxtState
+            return self.state
 
-def compute_state_values(in_place=False):
-    new_state_values = np.zeros((WORLD_SIZE, WORLD_SIZE))
-    state_values = new_state_values.copy()
-    iteration = 1
-    while True:
-        src = new_state_values if in_place else state_values
-        for (i, j) in states:
-            value = 0
-            for action in actions:
-                next_i, next_j = next_state([i, j], action)
-                value += ACTION_PORB * (REWARD + src[next_i, next_j])
-            new_state_values[i, j] = value
+    def showBoard(self):
+        self.board[self.state] = 1
+        for i in range(0, BOARD_ROWS):
+            print('-----------------')
+            out = '| '
+            for j in range(0, BOARD_COLS):
+                if self.board[i, j] == 1:
+                    token = '*'
+                if self.board[i, j] == -1:
+                    token = 'z'
+                if self.board[i, j] == 0:
+                    token = '0'
+                out += token + ' | '
+            print(out)
+        print('-----------------')
 
-        if np.sum(np.abs(new_state_values - state_values)) < 1e-4:
-            state_values = new_state_values.copy()
-            break
+        
 
-        state_values = new_state_values.copy()
-        iteration += 1
+# Agent of player
 
-    return state_values, iteration
+class Agent:
 
-if __name__ == '__main__':
-    state_values, iteration = compute_state_values(in_place=True)
-    print('In-place:')
-    print('State values under random policy after %d iterations' % (iteration))
-    print(state_values)
+    def __init__(self):
+        self.states = []
+        self.actions = ["up", "down", "left", "right"]
+        self.State = State()
+        self.lr = 0.2
+        self.exp_rate = 0.3
+        self.prob=0.25
+        self.disc_fact=0.9
 
-    state_values, iteration = compute_state_values(in_place=False)
-    print('Synchronous:')
-    print('State values under random policy after %d iterations' % (iteration))
-    print(state_values)
+        # initial state reward
+        self.state_values = {}
+        for i in range(BOARD_ROWS):
+            for j in range(BOARD_COLS):
+                self.state_values[(i, j)] = 0  # set initial value to 0
+
+    def chooseAction(self):
+        # choose action with most expected value
+        mx_nxt_reward = 0
+        action = ""
+
+        if np.random.uniform(0, 1) <= self.exp_rate:
+            action = np.random.choice(self.actions)
+        else:
+            # greedy action
+            for a in self.actions:
+                # if the action is deterministic
+                nxt_reward = self.state_values[self.State.nxtPosition(a)]
+                if nxt_reward >= mx_nxt_reward:
+                    action = a
+                    mx_nxt_reward = nxt_reward
+        return action
+
+    def takeAction(self, action):
+        position = self.State.nxtPosition(action)
+        return State(state=position)
+
+    def reset(self):
+        self.states = []
+        self.State = State()
+
+    def play(self, rounds=10, theta=0.001):
+        i = 0
+        steps = 0
+        cum_reward = 0
+        self.step_reward_df = pd.DataFrame( columns=['Round','Steps','Reward'])
+        while i < rounds:
+            # to the end of game back propagate reward
+            if self.State.isEnd:
+                # back propagate
+                reward = self.State.giveReward()
+                cum_reward = cum_reward + self.State.giveReward()
+                # explicitly assign end state to reward values
+                self.state_values[self.State.state] = reward  # this is optional
+                print(cum_reward)
+                self.step_reward_df.loc[len(self.step_reward_df.index)] = [i, steps, cum_reward] 
+                #self.step_reward_df.append(df)
+                print("Game End Reward", reward)
+                for s in reversed(self.states):
+                    reward = self.prob * (reward + (self.disc_fact * self.state_values[s]))
+                    self.state_values[s] = round(reward, 3)
+                self.reset()
+                i += 1
+                steps = 0
+                cum_reward = 0
+            else:
+                steps += 1
+                action = self.chooseAction()
+                # append trace
+                self.states.append(self.State.nxtPosition(action))
+                print("current position {} action {}".format(self.State.state, action))
+                # by taking the action, it reaches the next state
+                self.State = self.takeAction(action)
+                # mark is end
+                self.State.isEndFunc()
+                cum_reward = cum_reward + self.State.giveReward()
+                print(cum_reward)
+                print("nxt state", self.State.state)
+                print("---------------------")
+
+    def showValues(self):
+        for i in range(0, BOARD_ROWS):
+            print('----------------------------------')
+            out = '| '
+            for j in range(0, BOARD_COLS):
+                out += str(self.state_values[(i, j)]).ljust(6) + ' | '
+            print(out)
+        print('----------------------------------')
+
+if __name__ == "__main__":
+    ag = Agent()
+    ag.play(10)
+    print(ag.showValues())
+    values= ag.state_values
+    step_reward_df = ag.step_reward_df
+df = pd.DataFrame.from_dict(values, orient='index')
+df[['row','column']] = df.index.values.tolist()
+df = df.set_index(['row','column'])[0].unstack()
+step_reward_df

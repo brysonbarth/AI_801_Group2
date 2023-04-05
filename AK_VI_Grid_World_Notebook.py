@@ -13,12 +13,11 @@ import matplotlib.pyplot as plt
 # global variables
 BOARD_ROWS = 5
 BOARD_COLS = 5
-WIN_STATE = (5, 4)
-LOSE_STATE = (4, 2)
-# LOSE_STATE = (1, 1)
-# LOSE_STATE_B=(5,1)
+WIN_STATE = (3, 3)
+LOSE_STATE = (1, 1)
+LOSE_STATE_B=(4,0)
 START = (2, 0)
-# START = (2, 1)
+
 DETERMINISTIC = True
 
 
@@ -36,16 +35,16 @@ class State:
 
     def giveReward(self):
         if self.state == WIN_STATE:
-            return 50
+            return 10
         elif self.state == LOSE_STATE:
-            return -50
-        #        elif self.state == LOSE_STATE_B:
-        #    return -50
+            return -10
+        elif self.state == LOSE_STATE_B:
+            return -10
         else:
-            return 0
+            return -1
 
     def isEndFunc(self):
-        if (self.state == WIN_STATE) or (self.state == LOSE_STATE): #or (self.state == LOSE_STATE_B)
+        if (self.state == WIN_STATE) or (self.state == LOSE_STATE) or (self.state == LOSE_STATE_B):
             self.isEnd = True
 
     def nxtPosition(self, action):
@@ -188,7 +187,7 @@ class Agent:
 
 if __name__ == "__main__":
     ag = Agent()
-    ag.play(1000)
+    ag.play(500)
     print(ag.showValues())
     values= ag.state_values
     step_reward_df = ag.step_reward_df
